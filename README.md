@@ -6,7 +6,7 @@ I tend to write console-based user interfaces for my embedded systems.
 These interfaces have an almost "conversational language" style to signal the user's intention to the system.
 As such, writing the source code to parse the user's input to the system is boring and tediously painful. To avoid
 writing yet another console user input parser, I've decided it would be better to simply describe the tree-like structure
-of the desired console command line interaction possibilities. (e.g., "set led on 1" and similarly "set led off 2")
+of the desired console command line interaction possibilities. (e.g., "set led on 1" and similarly "set led off 2" or "get input 1")
 
 In this xml-description of an intended command line architecture, the designer documents each step of the way with descriptions,
 which are then later used to systematically build dynamic help output when a user enters invalid commands. The help output prints
