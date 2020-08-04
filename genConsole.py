@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 
+'''
+ Created by: Mark Taylor - Embed Creativity LLC
+ on:         4 August 2020
+'''
+
 import sys
 import xml.etree.ElementTree as ET
 from enum import Enum
+from datetime import datetime
 
 class Node:
     def __init__(self, name='~'):
@@ -354,6 +360,8 @@ class genConsole:
                 fileData += declaration + '\n'
 
         with open(OUTPUT_FILE, 'w') as f:
+            now = datetime.now()
+            fileData = fileData.replace('CODE_GENERATION_DATE', '{}'.format(now))
             f.write(fileData)
 
         #self.debugPrintNode(self.nodeRoot)
