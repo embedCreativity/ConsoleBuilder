@@ -55,15 +55,23 @@ TEMPLATE_NODES              = 'NODE_DECLARATIONS'
 
 METHOD_FORWARD              = 'bool FUNCTION (const char *userInput);'
 METHOD_PROTO = ''                                       +\
-    '// DESCRIPTION\n'                                  +\
+    '// DESCRIPTION:\n'                                 +\
+    '//   DESC_PLACEHOLDER\n'                           +\
+    '// PARAMS:\n'                                      +\
+    'PARAM_PLACEHOLDER\n'                               +\
     'bool FUNCTION (const char *userInput)\n'           +\
     '{\n'                                               +\
-    '    /* TODO:\n'                                    +\
-    '       NOTE\n'                                     +\
-    '    */\n'                                          +\
+    'INPUT_VERIFICATION_METHOD\n'                       +\
+    '\n'                                                +\
     '    printf("You have called: FUNCTION\\n");\n'     +\
     '    return true;\n'                                +\
     '}\n'
+
+VOID_CHECK = ''                                         +\
+    '    if ( NULL != userInput )\n'                    +\
+    '    {\n'                                           +\
+    '        return false;\n'                           +\
+    '    }'
 
 # 'Address of' prefix we insert before variable names
 REF = '&'
@@ -152,26 +160,32 @@ class genConsole:
 
     def createFunctionPrototype(self, method, description, params):
         paramLine = ''
-        formatNotes = 'PARAMS:\n'
+        formatNotes = ''
+        formatVerification = '    // TODO:\n'
 
         if len(params) > 0:
             for param in params:
                 paramLine += '{} {},'.format(param['type'], param['name'])
                 if 'format' in param:
-                    formatNotes += '           {} {} format: {}\n'.format(param['type'],
+                    formatNotes += '//    {} {} format: {}\n'.format(param['type'],
                                     param['name'], param['format'])
+                    formatVerification += '    //   Validate user input and convert to name: {}, type: {}, format: {}\n'.format(param['name'], param['type'], param['format'])
                 else:
-                    formatNotes += '           {} {}\n'.format(param['type'], param['name'])
+                    formatNotes += '//    {} {}\n'.format(param['type'], param['name'])
+                    formatVerification += '    //   Validate user input and convert to name: {}, type: {}\n'.format(param['name'], param['type'])
             paramLine = paramLine[:-1] # trim that last comma character
             formatNotes = formatNotes[:-1] # trim last newline
+            formatVerification = formatVerification[:-1] # trim last newline
         else:
-            formatNotes += '           VOID'
+            formatNotes += '//    VOID'
+            formatVerification = VOID_CHECK
 
         functionDeclaration = METHOD_PROTO
-        functionDeclaration = functionDeclaration.replace('DESCRIPTION', description)
+        functionDeclaration = functionDeclaration.replace('DESC_PLACEHOLDER', description)
         functionDeclaration = functionDeclaration.replace('FUNCTION', method)
         functionDeclaration = functionDeclaration.replace('ARGLIST', paramLine)
-        functionDeclaration = functionDeclaration.replace('NOTE', formatNotes)
+        functionDeclaration = functionDeclaration.replace('PARAM_PLACEHOLDER', formatNotes)
+        functionDeclaration = functionDeclaration.replace('INPUT_VERIFICATION_METHOD', formatVerification)
         forwardDeclaration  = METHOD_FORWARD
         forwardDeclaration  = forwardDeclaration.replace('FUNCTION', method)
         forwardDeclaration  = forwardDeclaration.replace('ARGLIST', paramLine)
