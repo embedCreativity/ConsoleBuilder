@@ -3,7 +3,7 @@ XML-based Console Interaction Description to C Source Code Generator
 
 # Usage
 ``` bash
-Console Builder
+./genConsole.py
 
 optional arguments:
   -h, --help        show this help message and exit
