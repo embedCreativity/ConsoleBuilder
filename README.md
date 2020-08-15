@@ -1,6 +1,16 @@
 # ConsoleBuilder
 XML-based Console Interaction Description to C Source Code Generator
 
+# Usage
+``` bash
+./genConsole.py
+
+optional arguments:
+  -h, --help        show this help message and exit
+  -i INPUTCONFIG    Console Description XML file
+  -o OUTPUTFILE     Output C source file
+  -e [EXTERNALIZE]  <Optional flag> Externalize Methods to a separate source file
+```
 # Description
 I tend to write console-based user interfaces for my embedded systems. 
 These interfaces have an almost "conversational language" style to signal the user's intention to the system.
