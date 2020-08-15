@@ -84,13 +84,13 @@ TEMPLATE_PARSING_ROUTINES   = 'EXAMPLE_PARSING_ROUTINES'
 
 INCLUDE_HEADER              = '#include "FILENAME"\n'
 EXTERN_METHOD_PROTO         = 'extern '
-METHOD_FORWARD              = 'bool FUNCTION (const char *userInput);'
+METHOD_FORWARD              = 'bool FUNCTION(const char* userInput);'
 METHOD_PROTO = ''                                       +\
     '// DESCRIPTION:\n'                                 +\
     '//   DESC_PLACEHOLDER\n'                           +\
     '// PARAMS:\n'                                      +\
     'PARAM_PLACEHOLDER\n'                               +\
-    'bool FUNCTION (const char *userInput)\n'           +\
+    'bool FUNCTION(const char* userInput)\n'            +\
     '{\n'                                               +\
     'INPUT_VERIFICATION_METHOD\n'                       +\
     '\n'                                                +\

@@ -1,7 +1,7 @@
 /************************************************************************************/
 /* Example Parameter Parsing Routines                                               */
 /************************************************************************************/
-bool getUnsignedDecimal(const char* input, uint32_t* num)
+static bool getSignedDecimal(const char* input, int32_t* num)
 {
     int ret;
     ret = sscanf(input, "%d", num);
@@ -12,7 +12,7 @@ bool getUnsignedDecimal(const char* input, uint32_t* num)
     return true;
 }
 
-bool getUnsignedHex(const char* input, uint32_t* num)
+static bool getUnsignedHex(const char* input, uint32_t* num)
 {
     int ret;
     ret = sscanf(input, "0X%x", num);
@@ -22,4 +22,3 @@ bool getUnsignedHex(const char* input, uint32_t* num)
     }
     return true;
 }
-
