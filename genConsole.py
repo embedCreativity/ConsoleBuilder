@@ -22,6 +22,7 @@ import sys
 import xml.etree.ElementTree as ET
 from enum import Enum
 from datetime import datetime
+import argparse
 
 class Node:
     def __init__(self, name='~'):
@@ -51,21 +52,38 @@ class StringType(Enum):
     STR_COMMAND = 1
     STR_DESCRIPTION = 2
 
+# helper function for getting boolean from argparse
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected')
+
 #############################################################
 # Code Generation Templates                                 #
 
 # Template file
 TEMPLATE_FILE               = 'CommandTreeTemplate.c'
-OUTPUT_FILE                 = 'foo.c'
+TEMPLATE_METHOD_HEADER_FILE = 'MethodTemplate.h'
+TEMPLATE_METHOD_SOURCE_FILE = 'MethodTemplate.c'
+TEMPLATE_PARSER_SOURCE_FILE = 'ParserTemplate.c'
 
 # Template strings correlate to the code template source,
 #   where we're going to replace these keywords with our
 #   generated source
 TEMPLATE_METHOD_FORWARDS    = 'METHOD_FUNC_FORWARD_DECLARATIONS'
 TEMPLATE_STRINGS            = 'STRING_DECLARATIONS'
-TEMPLATE_BRANCHES           = 'BRANCH_DECLARATIONS'
+TEMPLATE_HEADER_EXT         = 'EXTERNAL_HEADER'
 TEMPLATE_NODES              = 'NODE_DECLARATIONS'
+TEMPLATE_METHOD_STUBS       = 'FUNCTION_STUBS'
+TEMPLATE_PARSING_ROUTINES   = 'EXAMPLE_PARSING_ROUTINES'
 
+INCLUDE_HEADER              = '#include "FILENAME"\n'
+EXTERN_METHOD_PROTO         = 'extern '
 METHOD_FORWARD              = 'bool FUNCTION (const char *userInput);'
 METHOD_PROTO = ''                                       +\
     '// DESCRIPTION:\n'                                 +\
@@ -113,8 +131,17 @@ NODE_PROTO              = ''                                                    
 
 class genConsole:
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, inputPath, outputPath, externalize):
+        self.inputPath = inputPath
+        self.outputPath = outputPath
+        self.externalize = externalize
+        if self.externalize:
+            if -1 == self.outputPath.find('.c'):
+                self.methodHeaderPath = self.outputPath + 'Methods.h'
+                self.outputPath += '.c'
+            else:
+                self.methodHeaderPath = self.outputPath[:self.outputPath.find('.')] + 'Methods.h'
+
         self.codeMethodImplementations = []
         self.codeMethodForwardDeclarations = []
         self.codeCmdStringDeclarations = []
@@ -169,7 +196,6 @@ class genConsole:
         node.hasParams = hasParams
         if hasParams:
             node.strVarParamDesc = self.getStringVarName(StringType.STR_DESCRIPTION, paramsDesc)
-            print('{}: {} returned {}'.format(methodName, paramsDesc, node.strVarParamDesc))
 
     def createFunctionPrototype(self, method, description, params):
         paramLine = ''
@@ -199,7 +225,11 @@ class genConsole:
         functionDeclaration = functionDeclaration.replace('ARGLIST', paramLine)
         functionDeclaration = functionDeclaration.replace('PARAM_PLACEHOLDER', formatNotes)
         functionDeclaration = functionDeclaration.replace('INPUT_VERIFICATION_METHOD', formatVerification)
-        forwardDeclaration  = METHOD_FORWARD
+        if ( self.externalize ):
+            forwardDeclaration  = EXTERN_METHOD_PROTO + METHOD_FORWARD
+        else:
+            forwardDeclaration  = METHOD_FORWARD
+
         forwardDeclaration  = forwardDeclaration.replace('FUNCTION', method)
         forwardDeclaration  = forwardDeclaration.replace('ARGLIST', paramLine)
 
@@ -230,7 +260,6 @@ class genConsole:
                 strVarParamDesc = node.strVarParamDesc
 
                 nodeDeclaration = nodeDeclaration.replace('METHOD', methodName)
-                print('createBranchPrototypes: method: {}, help: {}'.format(methodName, strVarParamDesc))
                 if node.hasParams:
                     nodeDeclaration = nodeDeclaration.replace('ARG_HELP', strVarParamDesc)
                 else:
@@ -348,15 +377,15 @@ class genConsole:
                 raise ValueError('ERROR: Command must be followed by either sub-commands or one call to a method (and optional arguments), but not both')
 
     def start(self):
-        tree = ET.parse(self.path)
+        tree = ET.parse(self.inputPath)
         self.xmlRoot = tree.getroot()
 
         # Process commands
         commands = self.xmlRoot.findall('command')
         self.processCommands(commands)
 
-        with open(TEMPLATE_FILE) as f:
-            fileData = f.read()
+        with open(TEMPLATE_FILE) as fin:
+            consoleFileData = fin.read()
 
             # Process collected command string declarations
             codeStrings = ''
@@ -366,37 +395,106 @@ class genConsole:
             # Process collected description string declarations
             for string in self.codeDescStringDeclarations:
                 codeStrings += string + '\n'
+            # remove final newline
+            codeStrings = codeStrings[:-1]
 
             # Process collected function declarations
             codeForwardDeclarations = ''
             for declaration in self.codeMethodForwardDeclarations:
                 codeForwardDeclarations += declaration + '\n'
+            # remove final newline
+            codeForwardDeclarations = codeForwardDeclarations[:-1]
 
             # Create all of the commandTreeNode_t declarations
             self.createBranchPrototypes()
             codeNodes = ''
             for declaration in reversed(self.codeNodeDeclarations):
                 codeNodes += declaration + '\n'
+            # Remove final newline
+            codeNodes = codeNodes[:-1]
 
-            fileData = fileData.replace(TEMPLATE_METHOD_FORWARDS, codeForwardDeclarations)
-            fileData = fileData.replace(TEMPLATE_STRINGS, codeStrings)
-            fileData = fileData.replace(TEMPLATE_NODES, codeNodes)
+            consoleFileData = consoleFileData.replace(TEMPLATE_METHOD_FORWARDS, codeForwardDeclarations)
+            consoleFileData = consoleFileData.replace(TEMPLATE_STRINGS, codeStrings)
+            consoleFileData = consoleFileData.replace(TEMPLATE_NODES, codeNodes)
 
-            # Process collected function declarations
-            for declaration in self.codeMethodImplementations:
-                fileData += declaration + '\n'
+            # create separate source and header file for methods if self.externalize == true
+            if self.externalize:
+                includeString = INCLUDE_HEADER.replace('FILENAME', self.methodHeaderPath)
+                consoleFileData = consoleFileData.replace(TEMPLATE_HEADER_EXT, includeString)
+                # remove parameter parsing placeholder
+                consoleFileData = consoleFileData.replace(TEMPLATE_PARSING_ROUTINES, '')
 
-        with open(OUTPUT_FILE, 'w') as f:
-            now = datetime.now()
-            fileData = fileData.replace('CODE_GENERATION_DATE', '{}'.format(now))
-            f.write(fileData)
+                # Generate Method Source File
+                with open(TEMPLATE_METHOD_SOURCE_FILE) as fms:
+                    methodSourceFileData = fms.read()
+                    methodSourceFileData = methodSourceFileData.replace(TEMPLATE_HEADER_EXT, includeString)
+                    # insert parameter parsing placeholder
+                    with open(TEMPLATE_PARSER_SOURCE_FILE) as ptf:
+                        parserCode = ptf.read()
+                        methodSourceFileData = methodSourceFileData.replace(TEMPLATE_PARSING_ROUTINES, parserCode)
+
+                    stubs = ''
+                    # Process collected function declarations in new separate method source file
+                    for declaration in self.codeMethodImplementations:
+                        stubs += declaration + '\n'
+                    methodSourceFileData = methodSourceFileData.replace(TEMPLATE_METHOD_STUBS, stubs)
+                    methodSourceFileName = self.methodHeaderPath.replace('.h', '.c')
+                    print('Writing to file: {}'.format(methodSourceFileName))
+                    with open(methodSourceFileName, 'w') as fms_out:
+                        now = datetime.now()
+                        methodSourceFileData = methodSourceFileData.replace('CODE_GENERATION_DATE', '{}'.format(now))
+                        fms_out.write(methodSourceFileData)
+                # Generate Method Header File
+                with open(TEMPLATE_METHOD_HEADER_FILE) as fmh:
+                    methodHeaderFileData = fmh.read()
+                    # Remove 'extern ' from the list we created above, as these are local to this file
+                    methodHeaderFileData = methodHeaderFileData.replace(TEMPLATE_METHOD_FORWARDS,
+                        codeForwardDeclarations.replace(EXTERN_METHOD_PROTO, ''))
+                    methodHeaderFileData = methodHeaderFileData.replace('FILENAME_PLACEHOLDER',
+                        self.methodHeaderPath.replace('.h', '').upper())
+                    print('Writing to file: {}'.format(self.methodHeaderPath))
+                    with open(self.methodHeaderPath, 'w') as fmh_out:
+                        now = datetime.now()
+                        methodHeaderFileData = methodHeaderFileData.replace('CODE_GENERATION_DATE', '{}'.format(now))
+                        fmh_out.write(methodHeaderFileData)
+            else:
+                # remove header placeholder
+                consoleFileData = consoleFileData.replace(TEMPLATE_HEADER_EXT, '')
+
+                # insert parameter parsing placeholder
+                with open(TEMPLATE_PARSER_SOURCE_FILE) as ptf:
+                    parserCode = ptf.read()
+                    consoleFileData = consoleFileData.replace(TEMPLATE_PARSING_ROUTINES, parserCode)
+
+                # Process collected function declarations locally
+                for declaration in self.codeMethodImplementations:
+                    consoleFileData += declaration + '\n'
+
+            print('Writing to file: {}'.format(self.outputPath))
+            with open(self.outputPath, 'w') as fout:
+                now = datetime.now()
+                consoleFileData = consoleFileData.replace('CODE_GENERATION_DATE', '{}'.format(now))
+                fout.write(consoleFileData)
 
         #self.debugPrintNode(self.nodeRoot)
 
 if (__name__ == '__main__' ):
-    if len(sys.argv) != 2:
-        print('USAGE: {} <path_to_xml_input_file>'.format(sys.argv[0]))
-    else:
-        foo = genConsole(sys.argv[1])
-        foo.start()
+    parser = argparse.ArgumentParser(description='Console Builder')
+
+    parser.add_argument('-i', action='store', dest='inputConfig',
+        default='consoleFramework.xml', help='Console Description XML file')
+
+    parser.add_argument('-o', action='store', dest='outputFile',
+        default='Console.c', help='Output C source file')
+
+    parser.add_argument('-e', type=str2bool, nargs='?',
+        const=True, default=False, dest='externalize',
+        help='<Optional flag> Externalize Methods to a separate source file')
+
+    arguments = parser.parse_args()
+
+    print('Starting...')
+    foo = genConsole(arguments.inputConfig, arguments.outputFile, arguments.externalize)
+    foo.start()
+    print('Done')
 

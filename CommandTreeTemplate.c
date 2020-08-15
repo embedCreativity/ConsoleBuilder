@@ -10,7 +10,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
-
+EXTERNAL_HEADER
 // prototype method function pointer
 typedef bool (*Method_t)(const char*);
 
@@ -38,32 +38,7 @@ NODE_DECLARATIONS
 
 char userInput[USER_INPUT_BUF_SIZE];
 char* ptrUserInput;
-
-/************************************************************************************/
-/* Example Parameter Parsing Routines                                               */
-/************************************************************************************/
-bool getUnsignedDecimal(const char* input, uint32_t* num)
-{
-    int ret;
-    ret = sscanf(input, "%d", num);
-    if (ret < 1)
-    {
-        return false;
-    }
-    return true;
-}
-
-bool getUnsignedHex(const char* input, uint32_t* num)
-{
-    int ret;
-    ret = sscanf(input, "0X%x", num);
-    if (ret < 1)
-    {
-        return false;
-    }
-    return true;
-}
-
+EXAMPLE_PARSING_ROUTINES
 /************************************************************************************/
 /* Process user input prior to processing                                           */
 /************************************************************************************/
