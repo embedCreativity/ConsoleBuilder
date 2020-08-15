@@ -103,7 +103,6 @@ void printHelp(const commandTreeNode_t* node)
 /************************************************************************************/
 int main(void)
 {
-    uint32_t numChars;
     char* tok;
     const char delim[] = " ";
     const commandTreeNode_t* node = &node1;
@@ -117,7 +116,7 @@ int main(void)
         memset(userInput, 0, sizeof(char) * USER_INPUT_BUF_SIZE);
         if (NULL != fgets(userInput, USER_INPUT_BUF_SIZE, stdin))
         {
-            numChars = sanitizeString(userInput, USER_INPUT_BUF_SIZE);
+            sanitizeString(userInput, USER_INPUT_BUF_SIZE);
         }
         else {
             printf("ERROR - error in capturing user input\n");
