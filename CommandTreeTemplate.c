@@ -37,7 +37,6 @@ NODE_DECLARATIONS
 #define USER_INPUT_BUF_SIZE 128
 
 char userInput[USER_INPUT_BUF_SIZE];
-char* ptrUserInput;
 EXAMPLE_PARSING_ROUTINES
 /************************************************************************************/
 /* Process user input prior to processing                                           */
