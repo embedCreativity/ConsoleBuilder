@@ -345,6 +345,7 @@ class genConsole:
                 params = []
                 hasParams = False
                 paramHelp = ''
+                iParam = 0 # used to track which param from paramList we are currently processing
                 for param in paramList:
                     hasParams = True
                     paramType = param.find('type').text
@@ -359,9 +360,12 @@ class genConsole:
                                             ', Type: ' + paramType + ', Format: ' + paramFormat + '\n'
                         params.append({'type': paramType, 'name': paramName, 'description': paramDescription, 'format': paramFormat})
                     else:
-                        paramHelp = paramHelp + 'Name: ' + paramName +\
-                                            ', Type: ' + paramType + '\n'
+                        if len(paramList) > 1 and iParam < (len(paramList) - 1):
+                            paramHelp = paramHelp + 'Name: ' + paramName + ', Type: ' + paramType + ', '
+                        else:
+                            paramHelp = paramHelp + 'Name: ' + paramName + ', Type: ' + paramType + '\n'
                         params.append({'type': paramType, 'name': paramName, 'description': paramDescription})
+                    iParam += 1 # increment our tracker
 
                 if hasParams:
                     paramHelp = paramHelp[:-1] # remove last newline
@@ -374,6 +378,9 @@ class genConsole:
             elif 0 == len(methods) and 0 < len(subCommands):
                 self.processCommands(subCommands, node)
             else:
+                print("DEBUG: cmdName = {}, strVarCmdName = {}, description = {}, strVarDescName = {}".format(cmdName, strVarCmdName, description, strVarDescName))
+                print("DEBUG: methods = [{}]".format(methods))
+                print("DEBUG: subCommands = [{}]".format(subCommands))
                 raise ValueError('ERROR: Command must be followed by either sub-commands or one call to a method (and optional arguments), but not both')
 
     def start(self):
