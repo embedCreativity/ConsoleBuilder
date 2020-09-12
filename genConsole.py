@@ -206,12 +206,14 @@ class genConsole:
             for param in params:
                 paramLine += '{} {},'.format(param['type'], param['name'])
                 if 'format' in param:
-                    formatNotes += '//    {} {} format: {}\n'.format(param['type'],
-                                    param['name'], param['format'])
+                    formatNotes +=        '//    {} Type: {}, Format: {}\n'.format(param['name'], param['type'], param['format'])
                     formatVerification += '    //   Validate user input and convert to name: {}, type: {}, format: {}\n'.format(param['name'], param['type'], param['format'])
                 else:
-                    formatNotes += '//    {} {}\n'.format(param['type'], param['name'])
+                    formatNotes +=        '//    {} Type: {}\n'.format(param['name'], param['type'])
                     formatVerification += '    //   Validate user input and convert to name: {}, type: {}\n'.format(param['name'], param['type'])
+                if 'description' in param:
+                    formatNotes +=        '//        Description: {}\n'.format(param['description'])
+                    formatVerification += '    //        Description: {}\n'.format(param['description'])
             paramLine = paramLine[:-1] # trim that last comma character
             formatNotes = formatNotes[:-1] # trim last newline
             formatVerification = formatVerification[:-1] # trim last newline
@@ -356,14 +358,22 @@ class genConsole:
                     paramFormat = param.find('format') # optional
                     if paramFormat is not None:
                         paramFormat = paramFormat.text
-                        paramHelp = paramHelp + 'Name: ' + paramName +\
-                                            ', Type: ' + paramType + ', Format: ' + paramFormat + '\n'
+                        if len(paramList) > 1 and iParam < (len(paramList) - 1):
+                            paramHelp = paramHelp + '[Name: ' + paramName +\
+                                                    ', Type: ' + paramType + ', Format: ' + paramFormat +\
+                                                    ', Desc: ' + paramDescription + '], '
+                        else:
+                            paramHelp = paramHelp + '[Name: ' + paramName +\
+                                                    ', Type: ' + paramType + ', Format: ' + paramFormat +\
+                                                    ', Desc: ' + paramDescription + ']\n'
                         params.append({'type': paramType, 'name': paramName, 'description': paramDescription, 'format': paramFormat})
                     else:
                         if len(paramList) > 1 and iParam < (len(paramList) - 1):
-                            paramHelp = paramHelp + 'Name: ' + paramName + ', Type: ' + paramType + ', '
+                            paramHelp = paramHelp + '[Name: ' + paramName + ', Type: ' + paramType +\
+                                                    ', Desc: ' + paramDescription + '], '
                         else:
-                            paramHelp = paramHelp + 'Name: ' + paramName + ', Type: ' + paramType + '\n'
+                            paramHelp = paramHelp + '[Name: ' + paramName + ', Type: ' + paramType +\
+                                                    ', Desc: ' + paramDescription + ']\n'
                         params.append({'type': paramType, 'name': paramName, 'description': paramDescription})
                     iParam += 1 # increment our tracker
 
