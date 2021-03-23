@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
-  Copyright (C) 2020 Embed Creativity LLC
+  Copyright (C) 2021 Embed Creativity LLC
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,6 +31,8 @@ class Node:
         self.children = []
         self.description = ''
         self.isMethod = False
+        self.isGateway = False
+        self.endPoints = []
         self.methodName = ''
         self.hasParams = False
         self.strVarParamDesc = ''
@@ -150,7 +152,7 @@ class genConsole:
         self.cmdStringMap = {}
         self.descriptionStringMap = {}
         self.flattenedTree = []
-        self.nodeRoot = Node() # N-ary tree
+        self.rootNodes = []
 
     def debugPrintNode(self, node):
         print('NAME: {}'.format(node.name))
@@ -160,7 +162,13 @@ class genConsole:
             print('  PARENT: {}'.format(node.parent.name))
 
         print('  DESCRIPTION: {}'.format(node.description))
+        print('  HAS_PARAMS: {}'.format(node.hasParams))
+        print('  STRVARPARAMDESC: {}'.format(node.strVarParamDesc))
         print('  IS_METHOD: {}'.format(node.isMethod))
+        print('  IS_GATEWAY: {}'.format(node.isGateway))
+        if node.isGateway:
+            for endpoint in node.endPoints:
+                print('    EndPoint: {}'.format(endpoint))
         print('  METHOD_NAME: {}'.format(node.methodName))
         print('  STRVARNODENAME: {}'.format(node.strVarNodeName))
         if ( node.strVarBranchArrayName is not None ):
@@ -172,13 +180,17 @@ class genConsole:
         for child in node.children:
             self.debugPrintNode(child)
 
-    def createBranchNode(self, parent, varCmd, varDesc):
+    def createBranchNode(self, parent, varCmd, varDesc, name=None):
         # python N-ary tree maintenance
         node = Node(varCmd)
         node.setParent(parent)
         node.setDescription(varDesc)
         # create variable name for the commandTreeNode_t declaration
-        node.strVarNodeName = STR_NODE_PREFIX + str(len(self.flattenedTree) + 1)
+        if name is not None:
+            node.strVarNodeName = STR_NODE_PREFIX + str(name)
+        else:
+            node.strVarNodeName = STR_NODE_PREFIX + str(len(self.flattenedTree) + 1)
+
         parent.addChild(node)
         # Create a variable name for the array object if it does not exist
         if ( parent.strVarBranchArrayName is None ):
@@ -196,8 +208,16 @@ class genConsole:
         node.hasParams = hasParams
         if hasParams:
             node.strVarParamDesc = self.getStringVarName(StringType.STR_DESCRIPTION, paramsDesc)
+    
+    def convertGatewayNode(self, node, methodName, paramsDesc='', endpoints=[]):
+        node.isMethod = True
+        node.isGateway = True
+        node.methodName = methodName
+        node.hasParams = True
+        node.strVarParamDesc = self.getStringVarName(StringType.STR_DESCRIPTION, paramsDesc)
+        node.endPoints = endpoints
 
-    def createFunctionPrototype(self, method, description, params):
+    def createFunctionPrototype(self, method, description, params, endpointNames=None):
         paramLine = ''
         formatNotes = ''
         formatVerification = '    // TODO:\n'
@@ -214,6 +234,21 @@ class genConsole:
                 if 'description' in param:
                     formatNotes +=        '//        Description: {}\n'.format(param['description'])
                     formatVerification += '    //        Description: {}\n'.format(param['description'])
+
+            # For Gateway Methods
+            if endpointNames is not None:
+                description += ' (GATEWAY METHOD)'
+                for endpoint in endpointNames:
+                    formatVerification += '    //          Target EndPoint: &{}\n'.format(endpoint)
+                formatVerification += '    //\n'
+                formatVerification += '    //          Create a switch or multiple if/else statements based on userInput\n'
+                formatVerification += '    //          that sets rootNode to one of each of the Target EndPoints listed\n'
+                formatVerification += '    //          above. Example (using &nodeFooBar):\n'
+                formatVerification += '    //            if ( 0 == strncmp(userInput, "FOO", USER_INPUT_BUF_SIZE))\n'
+                formatVerification += '    //            {\n'
+                formatVerification += '    //                 rootNode = &nodeFooBar;\n'
+                formatVerification += '    //            }\n'
+
             paramLine = paramLine[:-1] # trim that last comma character
             formatNotes = formatNotes[:-1] # trim last newline
             formatVerification = formatVerification[:-1] # trim last newline
@@ -320,7 +355,8 @@ class genConsole:
     def processCommands(self, commands, parent=None):
 
         if parent == None:
-            parent = self.nodeRoot
+            parent = Node() # new N-ary tree
+            self.rootNodes.append(parent)
             parent = self.createBranchNode(parent, None, None)
 
         for command in commands:
@@ -337,9 +373,18 @@ class genConsole:
             # Create cmd tree object
             node = self.createBranchNode(parent, strVarCmdName, strVarDescName)
 
-            # Either subcommands can be present, or callMethod (with optional arguments), but not both
-            methods = command.findall('callMethod')
-            subCommands = command.findall('command')
+            # subcommands can be present, or callMethod (with optional arguments), but not both
+
+            # Gateway check
+            isGateway = 'type' in command.attrib and 'Gateway' == command.attrib['type']
+            if isGateway:
+                methods = command.findall('dispatch')
+                # Subcommands are masked for a gateway
+                subCommands = []
+            else:
+                methods = command.findall('callMethod')
+                subCommands = command.findall('command')
+
             # callMethod
             if 1 == len(methods) and 0 == len(subCommands):
                 methodName = methods[0].attrib['function']
@@ -377,12 +422,39 @@ class genConsole:
                         params.append({'type': paramType, 'name': paramName, 'description': paramDescription})
                     iParam += 1 # increment our tracker
 
-                if hasParams:
+                # A Gateway must have parameters
+                if isGateway and not hasParams:
+                    raise ValueError('ERROR: A Gateway must have parameters')
+                elif isGateway:
+                    # Process the gateway method
+                    paramHelp = paramHelp[:-1] # remove last newline
+                    endpoints = methods[0].findall('endpoint')
+                    endpointNames = []
+                    for endpoint in endpoints:
+                        endpointNames.append(str(STR_NODE_PREFIX+endpoint.attrib['name']))
+
+                    self.convertGatewayNode(node, methodName, paramHelp, endpointNames)
+
+                    # Then process all commands under this new endpoint (unlink parent)
+                    for endpoint in endpoints:
+                        # Create root node for each end point
+                        root = Node() # new N-ary tree
+                        self.rootNodes.append(root)
+                        root = self.createBranchNode(root, None, None, endpoint.attrib['name'])
+                        # Tie all commands under the endpoint to it
+                        endpointcommands = endpoint.findall('command')
+                        self.processCommands(endpointcommands, root)
+
+                # Regular method (optional parameters)
+                elif hasParams:
                     paramHelp = paramHelp[:-1] # remove last newline
                     self.convertMethodNode(node, methodName, hasParams, paramHelp)
                 else:
                     self.convertMethodNode(node, methodName)
-                self.createFunctionPrototype(methodName, description, params)
+                if isGateway:
+                    self.createFunctionPrototype(methodName, description, params, endpointNames)
+                else:
+                    self.createFunctionPrototype(methodName, description, params)
 
             # subcommands
             elif 0 == len(methods) and 0 < len(subCommands):
@@ -393,6 +465,7 @@ class genConsole:
                 print("DEBUG: subCommands = [{}]".format(subCommands))
                 raise ValueError('ERROR: Command must be followed by either sub-commands or one call to a method (and optional arguments), but not both')
 
+
     def start(self):
         tree = ET.parse(self.inputPath)
         self.xmlRoot = tree.getroot()
@@ -400,6 +473,10 @@ class genConsole:
         # Process commands
         commands = self.xmlRoot.findall('command')
         self.processCommands(commands)
+
+        #for node in self.rootNodes:
+        #    self.debugPrintNode(node)
+        #quit()
 
         with open(TEMPLATE_FILE) as fin:
             consoleFileData = fin.read()
@@ -492,8 +569,6 @@ class genConsole:
                 now = datetime.now()
                 consoleFileData = consoleFileData.replace('CODE_GENERATION_DATE', '{}'.format(now))
                 fout.write(consoleFileData)
-
-        #self.debugPrintNode(self.nodeRoot)
 
 if (__name__ == '__main__' ):
     parser = argparse.ArgumentParser(description='Console Builder')

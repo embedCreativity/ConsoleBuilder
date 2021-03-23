@@ -1,162 +1,114 @@
 <?xml version="1.0"?>
 <data>
-  <command text="Assign">
+
+  <!-- Top Level Function -->
+  <command text="Version">
     <description>
-      The File at FileID will be executed when the selected Action fires. 
+      Print Version Information
     </description>
-    <command text="Init">
-      <description>
-        Assign FileID to Init Action
-      </description>
-      <callMethod function="AssignInitFileID">
-        <param>
-          <name>FileID</name>
-          <type>uint8_t</type>
-          <description>FileID of the file to be assigned</description>
-        </param>
-      </callMethod>
-    </command>
-    <command text="GPIO">
-      <description>
-        Assign FileID to selected GPIO Action
-      </description>
-      <command text="Open">
-        <description>
-          Assign FileID to GPIO-Open Action
-        </description>
-        <callMethod function="AssignOpenFileID">
-          <param>
-            <name>FileID</name>
-            <type>uint8_t</type>
-            <format>hexadecimal</format>
-            <description>FileID of the file to be assigned</description>
-          </param>
-        </callMethod>
-      </command>
-      <command text="Close">
-        <description>
-          Assign FileID to GPIO-Close Action
-        </description>
-        <callMethod function="AssignCloseFileID">
-          <param>
-            <name>FileID</name>
-            <type>uint8_t</type>
-            <format>decimal</format>
-            <description>FileID of the file to be assigned</description>
-          </param>
-        </callMethod>
-      </command>
-    </command>
+    <callMethod function="PrintVersion"></callMethod>
   </command>
-  <command text="Map">
+
+  <!-- Top Level Function (Gateway) -->
+  <command text="Auth" type="Gateway">
     <description>
-      List Action to FileID assignments
+      Authentication Gateway
     </description>
-    <callMethod function="PrintFileAssignments"></callMethod>
-  </command>
-  <command text="System">
-    <description>
-      Lists various information about the file system
-    </description>
-    <command text="Size">
-      <description>
-        Prints total file system total space
-      </description>
-      <callMethod function="PrintSystemSize"></callMethod>
-    </command>
-    <command text="Consumed">
-      <description>
-        Prints amount of used file system space
-      </description>
-      <callMethod function="PrintUsedSpace"></callMethod>
-    </command>
-    <command text="Count">
-      <description>
-        Prints count of active files
-      </description>
-      <callMethod function="PrintNumActiveFiles"></callMethod>
-    </command>
-    <command text="Dump">
-      <description>
-        Hexdump of raw file system
-      </description>
-      <callMethod function="DumpRawData"></callMethod>
-    </command>
-    <command text="List">
-      <description>
-        Prints list of active FileIDs
-      </description>
-      <callMethod function="PrintActiveFileIDs"></callMethod>
-    </command>
-  </command>
-  <command text="Edit">
-    <description>
-      File Editor Interface. Takes FileID as input parameter.
-    </description>
-    <callMethod function="FileEditor">
+    <!-- Declare Gateway Dispatch Handler -->
+    <dispatch function="Authenticate">
       <param>
-        <name>FileID</name>
-        <type>uint8_t</type>
-        <description>FileID of the file to be editted</description>
+        <name>Password</name>
+        <type>char*</type>
+        <description>Gateway Password</description>
       </param>
-    </callMethod>
+
+      <!-- Gateway EndPoint -->
+      <endpoint name="AdminRoot">
+        <command text="Init">
+          <description>
+            Assign FileID to Init Action
+          </description>
+          <callMethod function="AssignInitFileID">
+            <param>
+              <name>FileID</name>
+              <type>uint8_t</type>
+              <description>FileID of the file to be assigned</description>
+            </param>
+          </callMethod>
+        </command>
+        <command text="GPIO">
+          <description>
+            Assign FileID to selected GPIO Action
+          </description>
+          <command text="Open">
+            <description>
+              Assign FileID to GPIO-Open Action
+            </description>
+            <callMethod function="AssignOpenFileID">
+              <param>
+                <name>FileID</name>
+                <type>uint8_t</type>
+                <format>hexadecimal</format>
+                <description>FileID of the file to be assigned</description>
+              </param>
+            </callMethod>
+          </command>
+          <command text="Close">
+            <description>
+              Assign FileID to GPIO-Close Action
+            </description>
+            <callMethod function="AssignCloseFileID">
+              <param>
+                <name>FileID</name>
+                <type>uint8_t</type>
+                <format>decimal</format>
+                <description>FileID of the file to be assigned</description>
+              </param>
+            </callMethod>
+          </command>
+        </command>
+      </endpoint>
+      <!-- Gateway EndPoint -->
+      <endpoint name="UserRoot">
+        <command text="Size">
+          <description>
+            Prints total file system total space
+          </description>
+          <callMethod function="PrintSystemSize"></callMethod>
+        </command>
+        <command text="Consumed">
+          <description>
+            Prints amount of used file system space
+          </description>
+          <callMethod function="PrintUsedSpace"></callMethod>
+        </command>
+        <command text="Count">
+          <description>
+            Prints count of active files
+          </description>
+          <callMethod function="PrintNumActiveFiles"></callMethod>
+        </command>
+        <command text="Dump">
+          <description>
+            Hexdump of raw file system
+          </description>
+          <callMethod function="DumpRawData"></callMethod>
+        </command>
+        <command text="List">
+          <description>
+            Prints list of active FileIDs
+          </description>
+          <callMethod function="PrintActiveFileIDs"></callMethod>
+        </command>
+      </endpoint>
+    <!-- End Gateway Endpoints -->
+    </dispatch>
+
   </command>
-  <command text="Print">
-    <description>
-      Print contents of file. Takes FileID as input parameter.
-    </description>
-    <callMethod function="PrintFile">
-      <param>
-        <name>FileID</name>
-        <type>uint8_t</type>
-        <description>FileID of the file to be printed</description>
-      </param>
-    </callMethod>
-  </command>
-  <command text="Delete">
-    <description>
-      Deletes a file. Takes FileID as input parameter.
-    </description>
-    <callMethod function="DeleteFile">
-      <param>
-        <name>FileID</name>
-        <type>uint8_t</type>
-        <description>FileID of the file to be deleted</description>
-      </param>
-    </callMethod>
-  </command>
-  <command text="Format">
-    <description>
-      Formats Storage
-    </description>
-    <command text="Confirm">
-      <description>
-        Confirm intention to nuke file system
-      </description>
-      <callMethod function="FormatStorage"></callMethod>
-    </command>
-  </command>
-  <command text="Move">
-    <description>
-      Commands movement of the stepper
-    </description>
-    <command text="Home">
-      <description>
-        Command stepper to Home position
-      </description>
-      <callMethod function="StepperHome"></callMethod>
-    </command>
-    <command text="Open">
-      <description>
-        Command stepper to Open position
-      </description>
-      <callMethod function="StepperOpen"></callMethod>    
-    </command>
-    <command text="Close">
-      <description>
-        Command stepper to Close position
-      </description>
-      <callMethod function="StepperClose"></callMethod>
-    </command>
-  </command>
+	
+
+  
+  
+
+
 </data>

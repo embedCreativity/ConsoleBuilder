@@ -25,6 +25,9 @@ typedef struct commandTreeNode_t
     const struct commandTreeNode_t** children;
 } commandTreeNode_t;
 
+// root node for tree traversal
+static const commandTreeNode_t* rootNode;
+
 // method forward declarations
 METHOD_FUNC_FORWARD_DECLARATIONS
 
@@ -72,7 +75,7 @@ uint32_t sanitizeString(char* input, uint32_t size)
 void printHelp(const commandTreeNode_t* node)
 {
     printf("HELP:\n");
-    if (&node1 != node)
+    if (rootNode != node)
     {
         printf("%s - %s\n", node->name, node->desc);
     }
@@ -104,9 +107,11 @@ int main(void)
 {
     char* tok;
     const char delim[] = " ";
+    // init local node (where we are now)
     const commandTreeNode_t* node = &node1;
+    // init global node (where we return to)
+    rootNode = &node1;
 
-    printf("Hello, World!\n");
     while (1)
     {
         // It's a courtesy to provide a command prompt
@@ -123,7 +128,10 @@ int main(void)
         }
         if (0 == strncmp(userInput, "QUIT", USER_INPUT_BUF_SIZE))
         {
-            break;
+            // Back out of Gateway "chroot"
+            rootNode = &node1;
+            node = &node1;
+            continue;
         }
 
         // Break up the command sentence into command words
@@ -148,7 +156,7 @@ int main(void)
             if (!found)
             {
                 printHelp(node);
-                node = &node1; // reset node pointer to root
+                node = rootNode; // reset node pointer to root
                 break;
             }
 
@@ -182,7 +190,7 @@ int main(void)
                 {
                     printHelp(node);
                 }
-                node = &node1; // reset node pointer to root
+                node = rootNode; // reset node pointer to root
                 break; // abandon remaining string if present
             }
             tok = strtok(NULL, delim);
@@ -191,7 +199,7 @@ int main(void)
             if (NULL == tok)
             {
                 printHelp(node);
-                node = &node1; // reset node pointer to root
+                node = rootNode; // reset node pointer to root
             }
         } // end input string processing loop
     }
